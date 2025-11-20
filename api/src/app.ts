@@ -19,9 +19,29 @@ import { errorHandler } from "./utils/errorHandler.js";
 dotenv.config();
 
 const app = express();
+const allowedOrigins = process.env.CORS_ORIGIN?.split(",") || [
+  "https://bxclan.vercel.app",
+];
+
 app.use(
   cors({
-    origin: process.env.CORS_ORIGIN?.split(",") || "*",
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.indexOf(origin) !== -1) return callback(null, true);
+      return callback(new Error("CORS policy: origin not allowed"));
+    },
+    credentials: true,
+  })
+);
+
+app.options(
+  "*",
+  cors({
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.indexOf(origin) !== -1) return callback(null, true);
+      return callback(new Error("CORS policy: origin not allowed"));
+    },
     credentials: true,
   })
 );
