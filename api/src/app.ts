@@ -31,11 +31,6 @@ app.use(cookieParser());
 app.get("/", (_req, res) => {
   res.send("API is running...");
 });
-// Simple JSON health/ping endpoint used by frontend to wake sleeping hosts (Render/Vercel)
-app.get("/api/ping", (_req, res) => {
-  res.json({ ok: true, time: Date.now() });
-});
-
 
 app.use("/api/auth", authRoutes);
 app.use("/api/clan", clanRoutes);
