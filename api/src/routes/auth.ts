@@ -57,9 +57,13 @@ router.post("/login", async (req, res, next) => {
     if (!username || !password)
       return res.status(400).json({ message: "Missing fields" });
     const user = await User.findOne({ username });
-    if (!user) return res.status(401).json({ message: "User not found" });
+    if (!user)
+      return res
+        .status(404)
+        .json({ message: "Tên đăng nhập không tồn tại" });
     const isValid = await bcrypt.compare(password, user.password);
-    if (!isValid) return res.status(401).json({ message: "Invalid password" });
+    if (!isValid)
+      return res.status(400).json({ message: "Mật khẩu không đúng" });
     const token = jwt.sign(
       { id: String(user._id), role: user.role },
       process.env.JWT_SECRET as string,

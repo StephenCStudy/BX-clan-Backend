@@ -45,24 +45,28 @@ router.post(
   requireRoles("organizer", "leader", "moderator"),
   async (req: any, res, next) => {
     try {
-      const { title, description, scheduleTime, maxPlayers, status, players } =
-        req.body;
-
-      // Auto-split players into 2 teams if exactly 10 players provided
-      let team1 = [];
-      let team2 = [];
-      if (players && players.length === 10) {
-        team1 = players.slice(0, 5);
-        team2 = players.slice(5, 10);
-      }
-
-      const item = await CustomRoom.create({
+      const {
         title,
         description,
         scheduleTime,
         maxPlayers,
         status,
-        players: players || [],
+        players,
+      } = req.body;
+
+      const sanitizedPlayers = Array.isArray(players)
+        ? players.slice(0, 10)
+        : [];
+      const team1 = sanitizedPlayers.slice(0, 5);
+      const team2 = sanitizedPlayers.slice(5, 10);
+
+      const item = await CustomRoom.create({
+        title,
+        description,
+        scheduleTime,
+        maxPlayers: maxPlayers || 10,
+        status: status || "open",
+        players: sanitizedPlayers,
         team1,
         team2,
         createdBy: req.user.id,
