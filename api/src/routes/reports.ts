@@ -51,4 +51,18 @@ router.put(
   }
 );
 
+router.delete(
+  "/:id",
+  requireAuth,
+  requireRoles("moderator", "organizer", "leader"),
+  async (req, res, next) => {
+    try {
+      await Report.findByIdAndDelete(req.params.id);
+      res.json({ success: true });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
 export default router;

@@ -10,7 +10,7 @@ app.use(express.json());
 
 
 app.get("/", (req, res) => {
-  res.send("API is running...");
+  res.send("NodeJs - Express - TypeScript [Backend] API is running! ...");
 });
 
 export default app;

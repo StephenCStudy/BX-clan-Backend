@@ -230,7 +230,7 @@ router.post(
                 type: "room-assignment",
                 title: "Bạn đã được xếp phòng",
                 message: `Bạn đã được xếp vào ${newRoom.title}. Vui lòng kiểm tra chi tiết.`,
-                relatedNews: newsId,
+                relatedCustomRoom: newRoom._id,
               });
             } catch (notifErr) {
               console.error(
@@ -442,21 +442,6 @@ router.put(
   }
 );
 
-router.delete(
-  "/:id",
-  requireAuth,
-  requireRoles("organizer", "leader", "moderator"),
-  async (req, res, next) => {
-    try {
-      await Registration.findByIdAndDelete(req.params.id);
-      res.json({ success: true });
-    } catch (err) {
-      next(err);
-    }
-  }
-);
-
-// Delete a registration
 router.delete(
   "/:id",
   requireAuth,

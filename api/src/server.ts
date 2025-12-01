@@ -17,10 +17,28 @@ const PORT = process.env.PORT || 5000;
     await connectDB();
     const server = http.createServer(app);
 
+    // CORS origins for Socket.IO
+    const allowedOrigins = [
+      "http://localhost:5173",
+      "http://localhost:3000",
+      "https://bxclan.vercel.app",
+      ...(process.env.CORS_ORIGIN?.split(",") || []),
+    ];
+
     const io = new SocketIOServer(server, {
       cors: {
-        origin: process.env.CORS_ORIGIN?.split(",") || "*",
+        origin: (origin, callback) => {
+          // Allow requests with no origin (mobile apps, curl, etc.)
+          if (!origin) return callback(null, true);
+          // Allow any vercel.app subdomain
+          if (origin.endsWith(".vercel.app")) return callback(null, true);
+          // Check allowed origins
+          if (allowedOrigins.includes(origin)) return callback(null, true);
+          // Reject others
+          callback(new Error("CORS not allowed"));
+        },
         credentials: true,
+        methods: ["GET", "POST"],
       },
     });
 
@@ -139,7 +157,9 @@ const PORT = process.env.PORT || 5000;
     });
 
     server.listen(PORT, () => {
-      console.log(` ----------- Server running on port [${PORT}]  ----------------`);
+      console.log(
+        ` ----------- Server running on port [${PORT}]  ----------------`
+      );
     });
   } catch (err) {
     console.error("Fatal error starting server:", err);

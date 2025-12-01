@@ -58,9 +58,7 @@ router.post("/login", async (req, res, next) => {
       return res.status(400).json({ message: "Missing fields" });
     const user = await User.findOne({ username });
     if (!user)
-      return res
-        .status(404)
-        .json({ message: "Tên đăng nhập không tồn tại" });
+      return res.status(404).json({ message: "Tên đăng nhập không tồn tại" });
     const isValid = await bcrypt.compare(password, user.password);
     if (!isValid)
       return res.status(400).json({ message: "Mật khẩu không đúng" });
@@ -149,6 +147,40 @@ router.put("/me/avatar", requireAuth, async (req: any, res, next) => {
       { new: true }
     ).select("username ingameName role avatarUrl clan rank lane");
     res.json(user);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.put("/me/password", requireAuth, async (req: any, res, next) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    if (!currentPassword || !newPassword) {
+      return res
+        .status(400)
+        .json({ message: "Vui lòng nhập đầy đủ thông tin" });
+    }
+    if (newPassword.length < 6) {
+      return res
+        .status(400)
+        .json({ message: "Mật khẩu mới phải có ít nhất 6 ký tự" });
+    }
+
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const isValid = await bcrypt.compare(currentPassword, user.password);
+    if (!isValid) {
+      return res.status(400).json({ message: "Mật khẩu hiện tại không đúng" });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    user.password = hashedPassword;
+    await user.save();
+
+    res.json({ success: true, message: "Đổi mật khẩu thành công" });
   } catch (err) {
     next(err);
   }

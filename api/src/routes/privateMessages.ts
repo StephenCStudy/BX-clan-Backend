@@ -4,6 +4,25 @@ import PrivateMessage from "../models/PrivateMessage.js";
 
 const router = Router();
 
+// Get all unread private messages for current user
+router.get("/unread", requireAuth, async (req: any, res, next) => {
+  try {
+    const userId = req.user.id;
+    const unreadMessages = await PrivateMessage.find({
+      to: userId,
+      isRead: false,
+    })
+      .populate("from", "username avatarUrl role")
+      .populate("to", "username avatarUrl role")
+      .sort({ createdAt: -1 })
+      .limit(10);
+
+    res.json(unreadMessages);
+  } catch (err) {
+    next(err);
+  }
+});
+
 // Get conversation with a specific user
 router.get(
   "/conversation/:userId",
@@ -92,6 +111,32 @@ router.get("/conversations", requireAuth, async (req: any, res, next) => {
 
     const conversations = Array.from(conversationsMap.values());
     res.json(conversations);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Send a private message
+router.post("/send", requireAuth, async (req: any, res, next) => {
+  try {
+    const { to, message } = req.body;
+    const from = req.user.id;
+
+    if (!to || !message) {
+      return res.status(400).json({ message: "Missing required fields" });
+    }
+
+    const privateMessage = await PrivateMessage.create({
+      from,
+      to,
+      message,
+    });
+
+    const populated = await PrivateMessage.findById(privateMessage._id)
+      .populate("from", "username avatarUrl role")
+      .populate("to", "username avatarUrl role");
+
+    res.status(201).json(populated);
   } catch (err) {
     next(err);
   }

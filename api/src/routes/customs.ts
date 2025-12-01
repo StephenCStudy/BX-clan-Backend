@@ -45,14 +45,8 @@ router.post(
   requireRoles("organizer", "leader", "moderator"),
   async (req: any, res, next) => {
     try {
-      const {
-        title,
-        description,
-        scheduleTime,
-        maxPlayers,
-        status,
-        players,
-      } = req.body;
+      const { title, description, scheduleTime, maxPlayers, status, players } =
+        req.body;
 
       const sanitizedPlayers = Array.isArray(players)
         ? players.slice(0, 10)
@@ -71,7 +65,27 @@ router.post(
         team2,
         createdBy: req.user.id,
       });
-      res.json(item);
+
+      // Gửi notification cho tất cả players được chọn
+      if (sanitizedPlayers.length > 0) {
+        const notifications = sanitizedPlayers.map((playerId: string) => ({
+          user: playerId,
+          type: "room-assignment",
+          title: "🎮 Bạn đã được xếp phòng",
+          message: `Bạn đã được xếp vào phòng "${title}". Vui lòng kiểm tra chi tiết.`,
+          relatedCustomRoom: item._id,
+        }));
+        await Notification.insertMany(notifications);
+      }
+
+      // Populate before returning
+      const populatedItem = await CustomRoom.findById(item._id)
+        .populate("players", "username ingameName avatarUrl")
+        .populate("team1", "username ingameName avatarUrl")
+        .populate("team2", "username ingameName avatarUrl")
+        .populate("createdBy", "username");
+
+      res.json(populatedItem);
     } catch (err) {
       next(err);
     }
@@ -316,6 +330,45 @@ router.delete(
       });
 
       res.json({ success: true });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// Update teams (swap/move members between teams)
+router.put(
+  "/:id/teams",
+  requireAuth,
+  requireRoles("organizer", "leader", "moderator"),
+  async (req, res, next) => {
+    try {
+      const { team1, team2 } = req.body;
+      const customRoom = await CustomRoom.findById(req.params.id);
+
+      if (!customRoom) {
+        return res.status(404).json({ message: "Custom room not found" });
+      }
+
+      // Validate team sizes
+      if ((team1?.length || 0) > 5 || (team2?.length || 0) > 5) {
+        return res.status(400).json({ message: "Mỗi đội tối đa 5 người" });
+      }
+
+      // Update teams
+      customRoom.team1 = team1 || [];
+      customRoom.team2 = team2 || [];
+      customRoom.players = [...(team1 || []), ...(team2 || [])];
+
+      await customRoom.save();
+
+      // Populate and return updated data
+      const updated = await CustomRoom.findById(req.params.id)
+        .populate("team1", "username ingameName avatarUrl")
+        .populate("team2", "username ingameName avatarUrl")
+        .populate("players", "username ingameName avatarUrl");
+
+      res.json(updated);
     } catch (err) {
       next(err);
     }

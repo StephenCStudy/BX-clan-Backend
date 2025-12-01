@@ -8,8 +8,9 @@ const router = Router();
 router.get("/", requireAuth, async (req: any, res, next) => {
   try {
     const items = await Notification.find({ user: req.user.id })
-      .populate("relatedNews", "title")
-      .populate("relatedRoom", "roomNumber")
+      .populate("relatedNews", "_id title")
+      .populate("relatedRoom", "_id roomNumber")
+      .populate("relatedCustomRoom", "_id title")
       .sort({ createdAt: -1 });
     res.json(items);
   } catch (err) {

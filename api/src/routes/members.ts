@@ -8,7 +8,7 @@ const router = Router();
 router.get("/", async (_req, res, next) => {
   try {
     const members = await User.find()
-      .select("username ingameName role avatarUrl joinDate rank lane")
+      .select("_id username ingameName role avatarUrl joinDate rank lane")
       .sort({ joinDate: -1 });
     res.json(members);
   } catch (err) {
