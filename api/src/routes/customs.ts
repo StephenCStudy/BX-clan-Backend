@@ -6,6 +6,18 @@ import CustomInvite from "../models/CustomInvite.js";
 
 const router = Router();
 
+// Helper function to emit socket events
+const emitSocketEvent = (req: any, event: string, data: any, room?: string) => {
+  const io = req.app.get("io");
+  if (io) {
+    if (room) {
+      io.to(room).emit(event, data);
+    } else {
+      io.emit(event, data);
+    }
+  }
+};
+
 router.get("/", async (req, res, next) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
@@ -76,6 +88,21 @@ router.post(
           relatedCustomRoom: item._id,
         }));
         await Notification.insertMany(notifications);
+
+        // Emit socket notification to each player
+        sanitizedPlayers.forEach((playerId: string) => {
+          emitSocketEvent(
+            req,
+            "notification:new",
+            {
+              type: "room-assignment",
+              title: "🎮 Bạn đã được xếp phòng",
+              message: `Bạn đã được xếp vào phòng "${title}"`,
+              relatedCustomRoom: item._id,
+            },
+            `user:${playerId}`
+          );
+        });
       }
 
       // Populate before returning
@@ -84,6 +111,9 @@ router.post(
         .populate("team1", "username ingameName avatarUrl")
         .populate("team2", "username ingameName avatarUrl")
         .populate("createdBy", "username");
+
+      // Emit room created event for realtime updates
+      emitSocketEvent(req, "custom:created", populatedItem);
 
       res.json(populatedItem);
     } catch (err) {
@@ -153,7 +183,7 @@ router.post("/:id/invite", requireAuth, async (req: any, res, next) => {
     }
 
     // Create invite record
-    await CustomInvite.create({
+    const invite = await CustomInvite.create({
       customRoom: customRoom._id,
       user: userId,
       invitedBy: req.user.id,
@@ -161,12 +191,34 @@ router.post("/:id/invite", requireAuth, async (req: any, res, next) => {
     });
 
     // Create notification
-    await Notification.create({
+    const notification = await Notification.create({
       user: userId,
       type: "custom-invite",
       title: `Lời mời tham gia Custom`,
       message: `Bạn được mời tham gia phòng "${customRoom.title}". Vào trang Custom để chấp nhận.`,
       relatedCustomRoom: customRoom._id,
+    });
+
+    // Emit socket notification to invited user
+    emitSocketEvent(
+      req,
+      "notification:new",
+      {
+        _id: notification._id,
+        type: "custom-invite",
+        title: `🎮 Lời mời tham gia Custom`,
+        message: `Bạn được mời tham gia phòng "${customRoom.title}"`,
+        relatedCustomRoom: customRoom._id,
+        isRead: false,
+        createdAt: notification.createdAt,
+      },
+      `user:${userId}`
+    );
+
+    // Emit invite update event for realtime UI updates
+    emitSocketEvent(req, "invite:created", {
+      roomId: customRoom._id,
+      invite: invite,
     });
 
     res.json({ success: true, message: "Invitation sent" });
@@ -242,13 +294,36 @@ router.post(
       await invite.save();
 
       // Notify user
-      await Notification.create({
+      const notification = await Notification.create({
         user: invite.user,
         type: "custom-invite",
         title: "Lời mời được chấp nhận",
         message: `Bạn đã được chấp nhận vào phòng "${customRoom.title}"!`,
         relatedCustomRoom: customRoom._id,
       });
+
+      // Emit socket notification to user
+      emitSocketEvent(
+        req,
+        "notification:new",
+        {
+          _id: notification._id,
+          type: "custom-invite",
+          title: "✅ Lời mời được chấp nhận",
+          message: `Bạn đã được chấp nhận vào phòng "${customRoom.title}"!`,
+          relatedCustomRoom: customRoom._id,
+          isRead: false,
+          createdAt: notification.createdAt,
+        },
+        `user:${invite.user}`
+      );
+
+      // Emit room updated event for realtime UI updates
+      const updatedRoom = await CustomRoom.findById(customRoom._id)
+        .populate("players", "username ingameName avatarUrl")
+        .populate("team1", "username ingameName avatarUrl")
+        .populate("team2", "username ingameName avatarUrl");
+      emitSocketEvent(req, "custom:updated", updatedRoom);
 
       res.json({ success: true, message: "Invite approved" });
     } catch (err) {

@@ -6,11 +6,14 @@ import { Server as SocketIOServer } from "socket.io";
 import ChatMessage from "./models/ChatMessage.js";
 import PrivateMessage from "./models/PrivateMessage.js";
 import Notification from "./models/Notification.js";
-import GameRoom from "./models/GameRoom.js";
+// import GameRoom from "./models/GameRoom.js";
 
 dotenv.config();
 
 const PORT = process.env.PORT || 5000;
+
+// Export io instance for use in routes
+export let io: SocketIOServer;
 
 (async () => {
   try {
@@ -22,10 +25,11 @@ const PORT = process.env.PORT || 5000;
       "http://localhost:5173",
       "http://localhost:3000",
       "https://bxclan.vercel.app",
-      ...(process.env.CORS_ORIGIN?.split(",") || []),
+      ...(process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(",") : []),
     ];
 
-    const io = new SocketIOServer(server, {
+    io = new SocketIOServer(server, {
+      path: process.env.SOCKET_PATH || "/socket.io",
       cors: {
         origin: (origin, callback) => {
           // Allow requests with no origin (mobile apps, curl, etc.)
@@ -40,7 +44,15 @@ const PORT = process.env.PORT || 5000;
         credentials: true,
         methods: ["GET", "POST"],
       },
+      // Production-ready settings
+      transports: ["websocket", "polling"],
+      allowUpgrades: true,
+      pingTimeout: 60000,
+      pingInterval: 25000,
     });
+
+    // Make io available globally for routes
+    app.set("io", io);
 
     io.on("connection", (socket) => {
       console.log("User connected:", socket.id);
