@@ -79,9 +79,27 @@ router.delete(
   }
 );
 
+/**
+ * GET /news/for-room-creation
+ * Lấy danh sách news có type="room-creation" (dùng để tạo phòng giải đấu)
+ */
+router.get("/for-room-creation", async (req, res, next) => {
+  try {
+    const items = await News.find({ type: "room-creation" })
+      .populate("createdBy", "username")
+      .populate("tournament")
+      .sort({ createdAt: -1 });
+    res.json(items);
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.get("/:id", async (req, res, next) => {
   try {
-    const item = await News.findById(req.params.id);
+    const item = await News.findById(req.params.id)
+      .populate("createdBy", "username")
+      .populate("tournament");
     res.json(item);
   } catch (err) {
     next(err);

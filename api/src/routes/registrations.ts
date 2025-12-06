@@ -8,6 +8,20 @@ import CustomRoom from "../models/CustomRoom.js";
 
 const router = Router();
 
+// Get user's own registrations
+router.get("/my", requireAuth, async (req: any, res, next) => {
+  try {
+    const registrations = await Registration.find({
+      user: req.user.id,
+    })
+      .populate("news", "_id title type")
+      .populate("room");
+    res.json(registrations);
+  } catch (err) {
+    next(err);
+  }
+});
+
 // Register for a news post (room-creation type)
 router.post(
   "/news/:newsId/register",

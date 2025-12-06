@@ -14,6 +14,8 @@ import streamRoutes from "./routes/streams.js";
 import chatRoutes from "./routes/chat.js";
 import notificationRoutes from "./routes/notifications.js";
 import privateMessageRoutes from "./routes/privateMessages.js";
+import tournamentRoutes from "./routes/tournaments.js";
+import teamRoutes from "./routes/teams.js";
 import { errorHandler } from "./utils/errorHandler.js";
 
 dotenv.config();
@@ -67,6 +69,8 @@ app.use("/api/streams", streamRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/private-messages", privateMessageRoutes);
+app.use("/api/tournaments", tournamentRoutes);
+app.use("/api/teams", teamRoutes);
 
 app.use(errorHandler);
 

@@ -30,6 +30,37 @@ const CustomRoomSchema = new Schema(
       index: true,
     },
     clan: { type: Schema.Types.ObjectId, ref: "Clan" },
+
+    // ===== TOURNAMENT FIELDS =====
+    // Liên kết với giải đấu (nếu phòng được tạo từ giải đấu)
+    tournament: { type: Schema.Types.ObjectId, ref: "Tournament", index: true },
+
+    // Liên kết với trận đấu trong giải đấu
+    tournamentMatch: { type: Schema.Types.ObjectId, ref: "TournamentMatch" },
+
+    // Team 1 trong giải đấu (lưu để hiển thị thông tin team)
+    tournamentTeam1: { type: Schema.Types.ObjectId, ref: "Team" },
+
+    // Team 2 trong giải đấu
+    tournamentTeam2: { type: Schema.Types.ObjectId, ref: "Team" },
+
+    // Vòng đấu trong giải đấu
+    tournamentRound: { type: Number },
+
+    // Đánh dấu đây là phòng giải đấu
+    isTournamentRoom: { type: Boolean, default: false },
+
+    // Team thắng trong giải đấu (được set khi kết thúc phòng)
+    winningTeam: { type: Schema.Types.ObjectId, ref: "Team" },
+
+    // Tên team thắng (dùng cho simple tournament room không có Team model)
+    winningTeamName: { type: String },
+
+    // Reference tới News đã tạo phòng này (cho simple tournament room)
+    newsReference: { type: Schema.Types.ObjectId, ref: "News" },
+
+    // Tên giải đấu (dùng cho simple tournament room)
+    tournamentName: { type: String },
   },
   { timestamps: true }
 );
